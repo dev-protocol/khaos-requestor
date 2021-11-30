@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use super::rocket;
-use rocket::http::{ContentType, Status};
+use rocket::http::ContentType;
 use rocket::local::blocking::Client;
 
 use crate::{KhaosRequest, TestResp};
@@ -12,11 +14,13 @@ fn handler() {
         contract: "",
         callback: "",
         destination: "",
-        destination_query: vec![""],
+        destination_query: HashMap::new(),
         destination_parse_response: vec![""],
         require: "https://chain.so/api/v2/get_info/BTC",
         require_query: vec![""],
         require_parse_response: "status",
+        secret_location: crate::SecretLocation::QueryParam,
+        secret_key: "user_token",
     };
 
     let serialized = serde_json::to_string(&req).unwrap();
