@@ -30,7 +30,6 @@ struct KhaosRequest<'r> {
     callback: &'r str,
     // Url endpoint to query
     destination: &'r str,
-    // destination_query: Vec<&'r str>,
     destination_query: HashMap<String, String>,
     destination_parse_response: Vec<&'r str>,
     // Should we set the secret in the headers or the URL?
@@ -56,8 +55,6 @@ async fn handler(
         Ok(key) => key,
         Err(error) => return Err(BadRequest(Some(error))),
     };
-
-    println!("key is {}", key.to_string());
 
     let mut query_params = req.destination_query.clone();
     let client = reqwest::Client::new();
