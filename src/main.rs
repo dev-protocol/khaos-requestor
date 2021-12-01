@@ -113,7 +113,6 @@ fn prepare_query(
             };
 
             headers.insert(header_name, header_val);
-            headers = HeaderMap::new()
         }
         SecretLocation::None => {
             println!("No secret needed for request");

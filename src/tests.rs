@@ -1,46 +1,95 @@
 use std::collections::HashMap;
 
-use super::rocket;
+use super::*;
 use rocket::http::ContentType;
 use rocket::local::blocking::Client;
 
 use crate::{KhaosRequest, TestResp};
 
+// #[test]
+// fn handler() {
+//     let client = Client::tracked(rocket()).expect("valid rocket instance");
+
+//     let req = KhaosRequest {
+//         contract: "",
+//         callback: "",
+//         destination: "",
+//         destination_query: HashMap::new(),
+//         destination_parse_response: vec![""],
+//         require: "https://chain.so/api/v2/get_info/BTC",
+//         require_query: vec![""],
+//         require_parse_response: "status",
+//         secret_location: crate::SecretLocation::QueryParam,
+//         secret_key: "user_token",
+//     };
+
+//     let serialized = serde_json::to_string(&req).unwrap();
+
+//     let response: TestResp = match client
+//         .post("/")
+//         .header(ContentType::JSON)
+//         .body(serialized)
+//         .dispatch()
+//         .into_json()
+//     {
+//         Some(thing) => thing,
+//         None => TestResp {
+//             val: "".to_string(),
+//         },
+//     };
+
+//     let formatted_val = format!("{}", response.val).replace("\"", "");
+
+//     assert_eq!(formatted_val, "success");
+// }
+
 #[test]
-fn handler() {
-    let client = Client::tracked(rocket()).expect("valid rocket instance");
+fn it_adds_query_key() {
+    let secret = "abcd123";
+    let test_param_key = String::from("dev");
+    let test_param_value = String::from("testing");
+    let query_params = HashMap::from([(test_param_key.clone(), test_param_value.clone())]);
+    let secret_location = SecretLocation::QueryParam;
+    let secret_param_key = "token";
 
-    let req = KhaosRequest {
-        contract: "",
-        callback: "",
-        destination: "",
-        destination_query: HashMap::new(),
-        destination_parse_response: vec![""],
-        require: "https://chain.so/api/v2/get_info/BTC",
-        require_query: vec![""],
-        require_parse_response: "status",
-        secret_location: crate::SecretLocation::QueryParam,
-        secret_key: "user_token",
+    let (params, _) = match prepare_query(secret, query_params, secret_location, secret_param_key) {
+        Ok(val) => val,
+        Err(error) => panic!("{}", error.to_string()),
     };
 
-    let serialized = serde_json::to_string(&req).unwrap();
+    assert_eq!(params.len(), 2);
+    let secret_param_key = match params.get(secret_param_key) {
+        Some(val) => val,
+        None => panic!("No key found"),
+    };
+    assert_eq!(secret_param_key, &secret.to_string());
 
-    let response: TestResp = match client
-        .post("/")
-        .header(ContentType::JSON)
-        .body(serialized)
-        .dispatch()
-        .into_json()
+    let get_param_key = match params.get(&test_param_key) {
+        Some(val) => val,
+        None => panic!("No key found"),
+    };
+    assert_eq!(get_param_key, &test_param_value);
+}
+
+#[test]
+fn it_adds_header_key() {
+    let secret = "abcd123";
+    let query_params = HashMap::new();
+    let secret_location = SecretLocation::Header;
+    let header_secret_key = "X-API-KEY";
+
+    let (_, headers) = match prepare_query(secret, query_params, secret_location, header_secret_key)
     {
-        Some(thing) => thing,
-        None => TestResp {
-            val: "".to_string(),
-        },
+        Ok(val) => val,
+        Err(error) => panic!("{}", error.to_string()),
     };
 
-    let formatted_val = format!("{}", response.val).replace("\"", "");
-
-    assert_eq!(formatted_val, "success");
+    assert_eq!(headers.len(), 1);
+    let get_key = match headers.get(header_secret_key) {
+        Some(val) => val,
+        None => panic!("No key found"),
+    };
+    assert_eq!(get_key, &secret.to_string());
 }
 
 // #[test]
