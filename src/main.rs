@@ -15,7 +15,7 @@ mod tests;
 #[macro_use]
 extern crate rocket;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone, Copy)]
 enum SecretLocation {
     QueryParam,
     Header,
@@ -56,31 +56,16 @@ async fn handler(
         Err(error) => return Err(BadRequest(Some(error))),
     };
 
-    let mut query_params = req.destination_query.clone();
     let client = reqwest::Client::new();
-    let mut headers = HeaderMap::new();
 
-    match req.secret_location {
-        SecretLocation::QueryParam => {
-            query_params.insert(req.secret_key.to_string(), key);
-        }
-        SecretLocation::Header => {
-            let header_val = match HeaderValue::from_str(&key) {
-                Ok(val) => val,
-                Err(error) => return Err(BadRequest(Some(error.to_string()))),
-            };
-
-            let header_name = match HeaderName::from_str(req.secret_key) {
-                Ok(val) => val,
-                Err(error) => return Err(BadRequest(Some(error.to_string()))),
-            };
-
-            headers.insert(header_name, header_val);
-            headers = HeaderMap::new()
-        }
-        SecretLocation::None => {
-            println!("No secret needed for request");
-        }
+    let (query_params, headers) = match prepare_query(
+        &key,
+        req.destination_query.clone(),
+        req.secret_location,
+        req.secret_key,
+    ) {
+        Ok(res) => res,
+        Err(error) => return Err(BadRequest(Some(error.to_string()))),
     };
 
     // Format URL with params
@@ -102,6 +87,40 @@ async fn handler(
     };
 
     Ok(Json(json))
+}
+
+fn prepare_query(
+    key: &str,
+    mut query_params: HashMap<String, String>,
+    secret_location: SecretLocation,
+    param_key: &str,
+) -> Result<(HashMap<String, String>, HeaderMap), String> {
+    let mut headers = HeaderMap::new();
+
+    match secret_location {
+        SecretLocation::QueryParam => {
+            query_params.insert(param_key.to_string(), key.to_string());
+        }
+        SecretLocation::Header => {
+            let header_val = match HeaderValue::from_str(&key) {
+                Ok(val) => val,
+                Err(error) => return Err(error.to_string()),
+            };
+
+            let header_name = match HeaderName::from_str(param_key) {
+                Ok(val) => val,
+                Err(error) => return Err(error.to_string()),
+            };
+
+            headers.insert(header_name, header_val);
+            headers = HeaderMap::new()
+        }
+        SecretLocation::None => {
+            println!("No secret needed for request");
+        }
+    };
+
+    Ok((query_params, headers))
 }
 
 async fn retreive_key(
