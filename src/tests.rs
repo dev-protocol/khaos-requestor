@@ -7,6 +7,60 @@ use rocket::local::blocking::Client;
 use crate::KhaosRequest;
 use httpmock::prelude::*;
 use serde_json::json;
+// use tokio::test;
+
+#[test]
+fn it_handles_khaos_request() {
+    let client = Client::tracked(rocket()).expect("valid rocket instance");
+    // Start a lightweight mock server.
+    let dev_server: httpmock::MockServer = MockServer::start();
+    let endpoint: httpmock::MockServer = MockServer::start();
+
+    let dev_server_mock = dev_server.mock(|when, then| {
+        when.method(GET).path("/fetch-secret");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"user_token": "abc123"}));
+    });
+    let json_body = json!({"nested": {
+        "test": 123
+    }});
+    let endpoint_mock = endpoint.mock(|when, then| {
+        when.method(GET).path("/query-endpoint");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json_body.clone());
+    });
+
+    let dev_server_address = format!("http://{}/fetch-secret", dev_server_mock.server_address());
+    let endpoint_server_address =
+        format!("http://{}/query-endpoint", endpoint_mock.server_address());
+
+    let req = KhaosRequest {
+        contract: "",
+        callback: "",
+        destination: &endpoint_server_address,
+        destination_query: HashMap::new(),
+        destination_parse_response: vec![""],
+        require: &dev_server_address,
+        require_query: vec![""],
+        require_parse_response: "user_token",
+        secret_location: crate::SecretLocation::QueryParam,
+        secret_key: "user_token",
+    };
+
+    let serialized = serde_json::to_string(&req).unwrap();
+
+    let response = client
+        .post("/")
+        .header(ContentType::JSON)
+        .body(serialized)
+        .dispatch();
+
+    dev_server_mock.assert();
+    endpoint_mock.assert();
+    assert_eq!(response.into_string().unwrap(), json_body.to_string());
+}
 
 #[tokio::test]
 async fn it_retreives_key() {
@@ -16,7 +70,7 @@ async fn it_retreives_key() {
     let dev_server_mock = mock_server.mock(|when, then| {
         when.method(GET).path("/fetch-secret");
         then.status(200)
-            .header("content-type", "text/html")
+            .header("content-type", "application/json")
             .json_body(json!({"user_token": "abc123"}));
     });
 
