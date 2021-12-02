@@ -41,11 +41,6 @@ struct KhaosRequest<'r> {
     require_parse_response: &'r str,
 }
 
-#[derive(Deserialize, Serialize)]
-struct TestResp {
-    val: String,
-}
-
 #[post("/", format = "application/json", data = "<req>")]
 async fn handler(
     req: Json<KhaosRequest<'_>>,

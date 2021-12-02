@@ -11,3 +11,7 @@ serde_yaml = "0.8.21"
 serde_json = "1.0.59"
 rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "e382bc584b478092fdd53eefb9f90ea9c08a6967", features = ["json"] }
 reqwest = { version = "0.11.3", features = ["json", "blocking"] }
+
+[dev-dependencies]
+httpmock = "0.6.4"
+tokio = "1.14.0"

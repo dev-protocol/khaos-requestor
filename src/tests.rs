@@ -4,44 +4,33 @@ use super::*;
 use rocket::http::ContentType;
 use rocket::local::blocking::Client;
 
-use crate::{KhaosRequest, TestResp};
+use crate::KhaosRequest;
+use httpmock::prelude::*;
+use serde_json::json;
 
-// #[test]
-// fn handler() {
-//     let client = Client::tracked(rocket()).expect("valid rocket instance");
+#[tokio::test]
+async fn it_retreives_key() {
+    let mock_server: httpmock::MockServer = MockServer::start();
 
-//     let req = KhaosRequest {
-//         contract: "",
-//         callback: "",
-//         destination: "",
-//         destination_query: HashMap::new(),
-//         destination_parse_response: vec![""],
-//         require: "https://chain.so/api/v2/get_info/BTC",
-//         require_query: vec![""],
-//         require_parse_response: "status",
-//         secret_location: crate::SecretLocation::QueryParam,
-//         secret_key: "user_token",
-//     };
+    // Create a mock on the server.
+    let dev_server_mock = mock_server.mock(|when, then| {
+        when.method(GET).path("/fetch-secret");
+        then.status(200)
+            .header("content-type", "text/html")
+            .json_body(json!({"user_token": "abc123"}));
+    });
 
-//     let serialized = serde_json::to_string(&req).unwrap();
+    let mock_server_address = format!("http://{}/fetch-secret", dev_server_mock.server_address());
 
-//     let response: TestResp = match client
-//         .post("/")
-//         .header(ContentType::JSON)
-//         .body(serialized)
-//         .dispatch()
-//         .into_json()
-//     {
-//         Some(thing) => thing,
-//         None => TestResp {
-//             val: "".to_string(),
-//         },
-//     };
+    let key = match retreive_key(&mock_server_address, "user_token").await {
+        Ok(val) => val,
+        Err(error) => panic!("{}", error.to_string()),
+    };
 
-//     let formatted_val = format!("{}", response.val).replace("\"", "");
-
-//     assert_eq!(formatted_val, "success");
-// }
+    dev_server_mock.assert();
+    let formatted_key = format!("{}", key).replace("\"", "");
+    assert_eq!(formatted_key, "abc123");
+}
 
 #[test]
 fn it_adds_query_key() {
