@@ -1,5 +1,5 @@
 [package]
-name = "khaos-requester"
+name = "khaos-requestor"
 version = "0.1.0"
 edition = "2018"
 
