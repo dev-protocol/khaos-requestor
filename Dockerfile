@@ -21,7 +21,7 @@ RUN rm src/*.rs
 COPY ./src ./src
 
 # Build for release.
-RUN rm ./target/release/deps/khaos-requestor*
+RUN rm ./target/release/deps/khaos_requestor*
 RUN cargo build --release
 
 # The final base image
